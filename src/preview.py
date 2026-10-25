@@ -5,7 +5,7 @@
 """
 import unicodedata
 
-from wikiconv.tree import cell_inline, text_of
+from wikiconv.tree import cell_inline, text_of, video_label, video_url
 
 MAX_LEVEL = 8
 
@@ -53,6 +53,10 @@ class Layout:
                 start = len(self.out)
                 self.inline(n[2] or [["t", n[1]]], tags + ("link",))
                 self.attach(start, ("link", "url", n[1]))
+            elif k == "video":   # 창에서는 영상을 재생할 수 없어 누르면 브라우저로 여는 링크로 보인다
+                start = len(self.out)
+                self.emit(video_label(n[1]), tags + ("link",))
+                self.attach(start, ("link", "url", video_url(n[1], n[2])))
             elif k == "img":
                 self.emit("[그림: " + (n[2] or n[1]) + "]", tags + ("chip",), ("img", n[1], n[2] or ""))
             elif k == "fn":

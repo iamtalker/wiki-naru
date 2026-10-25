@@ -190,6 +190,9 @@ def main():
     for src in ("https://youtu.be/dQw4w9WgXcQ?t=5", "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=5",
                 "https://www.youtube.com/embed/dQw4w9WgXcQ", "dQw4w9WgXcQ"):
         assert wikiconv.parse(f"[youtube({src})]", "namumark").blocks[0][1] == [["video", "youtube", "dQw4w9WgXcQ"]], src
+    import preview   # 렌더링 창에서 영상이 사라지지 않고 링크로 보인다
+    segs = preview.layout(wikiconv.Doc([["p", [["video", "youtube", "abc"]]]]))
+    assert any("youtube.com/watch?v=abc" in str(s) for s in segs), segs
     # 외부 그림 주소의 ?질의는 크기 지정으로 오해해 자르지 않는다
     url = "https://example.com/t/?fname=https://x.com/a.jpg"
     assert wikiconv.parse("{{" + url + "}}", "dokuwiki").blocks[0][1] == [["img", url, ""]]

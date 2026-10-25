@@ -3,7 +3,7 @@ import html
 import re
 import urllib.parse
 
-from .tree import CAT, raw_fallback, text_of
+from .tree import CAT, raw_fallback, text_of, video_label, video_url
 
 
 def default_link(page):
@@ -47,6 +47,8 @@ class Writer:
                 safe = n[1] if re.match(r"(?i)^(https?|mailto|ftp):", n[1]) else "#"
                 out.append(f'<a href="{e(safe)}" rel="nofollow noopener" target="_blank">'
                            f'{self.inline(n[2]) if n[2] else e(n[1])}</a>')
+            elif k == "video":
+                out.append(f'<a href="{e(video_url(n[1], n[2]))}" rel="nofollow noopener" target="_blank">{e(video_label(n[1]))}</a>')
             elif k == "img":
                 src = n[1] if re.match(r"(?i)^https?://", n[1]) else "/_file/" + urllib.parse.quote(n[1])
                 out.append(f'<img src="{e(src)}" alt="{e(n[2] or "")}" loading="lazy">')
