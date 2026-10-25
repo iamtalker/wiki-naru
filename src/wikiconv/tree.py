@@ -46,6 +46,13 @@ def video_url(service, vid):
     return VIDEOS[service][1].format(vid)
 
 
+def youtube_id(url):
+    """유튜브 영상 주소(youtu.be/ID · watch?v=ID · embed/ID · shorts/ID)에서 ID. 아니면 None."""
+    import re
+    m = re.match(r"(?i)https?://(?:youtu\.be/|(?:www\.|m\.)?youtube\.com/(?:watch\?(?:[^#\s]*&)?v=|embed/|shorts/))([\w-]+)", url.strip())
+    return m.group(1) if m else None
+
+
 def video_label(service):
     return f"▶ {VIDEOS[service][0]}에서 보기"
 

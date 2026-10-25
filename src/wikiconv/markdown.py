@@ -15,7 +15,7 @@ import json
 import re
 import urllib.parse
 
-from .tree import CAT, Doc, InlineScanner, build_lists, cell_inline, flatten_blocks, merge_text, raw_fallback, text_of, video_from_link, video_label, video_url
+from .tree import CAT, Doc, InlineScanner, build_lists, cell_inline, flatten_blocks, merge_text, raw_fallback, text_of, video_from_link, youtube_id, video_label, video_url
 
 MD_BAD = str.maketrans('\\/:*?"<>|#', "＼／：＊？＂＜＞｜＃")
 MD_BACK = str.maketrans("＼／：＊？＂＜＞｜＃", '\\/:*?"<>|#')
@@ -309,7 +309,7 @@ class Reader:
                 (re.compile(r"\[\^([^\]\s]+)\](?!:)"),
                  lambda m: ["fn", "" if m.group(1).isdigit() else m.group(1), self.notes.get(m.group(1)) or []]),
                 (re.compile(r"!\[([^\]]*)\]\((?:<([^>]*)>|([^)\s]*))\)"),
-                 lambda m: ["img", m.group(2) if m.group(2) is not None else m.group(3), m.group(1)]),
+                 lambda m: self.image(m.group(2) if m.group(2) is not None else m.group(3), m.group(1))),
                 (re.compile(r"\[((?:\\.|!\[[^\]]*\]\((?:<[^>]*>|[^)\s]*)\)|[^\[\]\\])*)\]\((?:<([^>]*)>|([^)\s]*))\)"),
                  self.link),
                 (re.compile(r"<(https?://[^>\s]+)>"), lambda m: ["url", m.group(1), None]),
@@ -360,6 +360,11 @@ class Reader:
         target = re.sub(r"\\(.)", r"\1", target).strip()
         page, _, anchor = target.partition("#")
         return ["link", page, self.inline(label) if label else None, anchor]
+
+    @staticmethod
+    def image(src, alt):
+        yt = youtube_id(src)   # ![](유튜브 주소) 는 Joplin 등에서 재생기가 되는 표기라 영상으로 읽는다
+        return ["video", "youtube", yt] if yt else ["img", src, alt]
 
     def html_link(self, m):
         href, label = html.unescape(m.group(1)), m.group(2)

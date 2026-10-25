@@ -193,6 +193,9 @@ def main():
     import preview   # 렌더링 창에서 영상이 사라지지 않고 링크로 보인다
     segs = preview.layout(wikiconv.Doc([["p", [["video", "youtube", "abc"]]]]))
     assert any("youtube.com/watch?v=abc" in str(s) for s in segs), segs
+    yt = "https://www.youtube.com/watch?v=NHXUM-6a3dU&list=RDNHXUM-6a3dU&start_radio=1"
+    assert wikiconv.parse(f"![]({yt})", "markdown").blocks[0][1] == [["video", "youtube", "NHXUM-6a3dU"]]
+    assert wikiconv.parse("![x](a.png)", "markdown").blocks[0][1] == [["img", "a.png", "x"]]
     # 외부 그림 주소의 ?질의는 크기 지정으로 오해해 자르지 않는다
     url = "https://example.com/t/?fname=https://x.com/a.jpg"
     assert wikiconv.parse("{{" + url + "}}", "dokuwiki").blocks[0][1] == [["img", url, ""]]

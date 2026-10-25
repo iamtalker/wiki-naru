@@ -1,7 +1,7 @@
 """나무마크(openNAMU) 읽기·쓰기."""
 import re
 
-from .tree import CAT, VIDEOS, Doc, InlineScanner, build_lists, flatten_blocks, merge_text, raw_fallback, text_of
+from .tree import CAT, VIDEOS, Doc, InlineScanner, build_lists, flatten_blocks, merge_text, raw_fallback, text_of, youtube_id
 
 PH = "\x00"
 PH_RE = re.compile(PH + r"(\d+)" + PH)
@@ -172,8 +172,7 @@ class Reader:
         if name in VIDEOS:
             vid = arg.split(",")[0].strip()
             if name == "youtube":   # 주소로 쓴 것(youtu.be/ID · watch?v=ID · embed/ID)도 ID 만 뽑는다
-                ym = re.match(r"(?i)https?://(?:youtu\.be/|(?:www\.|m\.)?youtube\.com/(?:watch\?(?:[^#\s]*&)?v=|embed/|shorts/))([\w-]+)", vid)
-                vid = ym.group(1) if ym else vid
+                vid = youtube_id(vid) or vid
             return ["video", name, vid] if vid else ["raw", "namumark", m.group(0)]
         if name == "math":
             return ["math", arg]
