@@ -970,7 +970,12 @@ def run_gui(argv=None, loop=True):
             def sep():
                 tk.Frame(bar, width=1, bg=C["line"]).pack(side="left", fill="y", padx=6, pady=3)
 
-            button("☰", "문법 해설 사이드바 보이기/숨기기", self.flip_sidebar)
+            sb = tk.Checkbutton(bar, text="문법 해설", variable=self.show_sidebar, command=self.toggle_sidebar,
+                                relief="flat", bd=0, takefocus=False, bg=C["card"], fg=C["text"],
+                                activebackground=C["soft"], selectcolor=C["card"], cursor="hand2", font=(self.ui, 10))
+            sb.pack(side="left", padx=(4, 1))
+            hover(sb)
+            tip(sb, "문법 해설 사이드바 보이기/숨기기")
             sep()
             button("📄", "새 문서 (Ctrl+N)", self.new)
             button("📂", "열기 (Ctrl+O)", self.open_dialog)

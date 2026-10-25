@@ -13,7 +13,7 @@
 인라인:
   ["t", 글]  ["b"|"i"|"u"|"s"|"sup"|"sub", 인라인들]  ["code", 글]  ["br"]  ["math", 수식]
   ["link", 문서, 인라인들 또는 None, 앵커]   ["url", 주소, 인라인들 또는 None]
-  ["img", 파일 또는 주소, 설명]   ["fn", 이름, 인라인들]   ["tpl", 이름, 인자]   ["raw", 형식, 원문]
+  ["img", 파일 또는 주소, 설명]   ["video", 서비스, 영상ID]   ["fn", 이름, 인라인들]   ["tpl", 이름, 인자]   ["raw", 형식, 원문]
 문서 제목의 이름공간은 공통으로 '분류:' 와 '틀:' 을 쓴다(각 형식이 읽고 쓸 때 바꾼다).
 """
 
@@ -34,6 +34,31 @@ CAT = "분류:"
 TPL = "틀:"
 
 
+# 영상 끼워 넣기: 서비스 이름 → (표시 이름, 주소 틀). 끼워 넣기가 없는 형식은 '▶ 표시 이름에서 보기' 링크로 쓴다.
+VIDEOS = {"youtube": ("유튜브", "https://www.youtube.com/watch?v={}"),
+          "nicovideo": ("니코니코 동화", "https://www.nicovideo.jp/watch/{}"),
+          "vimeo": ("비메오", "https://vimeo.com/{}"),
+          "kakaotv": ("카카오TV", "https://tv.kakao.com/v/{}"),
+          "navertv": ("네이버TV", "https://tv.naver.com/v/{}")}
+
+
+def video_url(service, vid):
+    return VIDEOS[service][1].format(vid)
+
+
+def video_label(service):
+    return f"▶ {VIDEOS[service][0]}에서 보기"
+
+
+def video_from_link(url, label):
+    """['video', 서비스, ID] 를 링크로 쓴 것(주소와 '▶ …에서 보기' 글이 맞을 때)을 영상으로 되돌린다. 아니면 None."""
+    for svc, (name, fmt) in VIDEOS.items():
+        head, tail = fmt.split("{}")
+        if label == video_label(svc) and url.startswith(head) and url.endswith(tail) and len(url) > len(head) + len(tail):
+            return ["video", svc, url[len(head):len(url) - len(tail) if tail else None]]
+    return None
+
+
 def text_of(inl):
     """인라인들의 글자만."""
     out = []
@@ -49,6 +74,8 @@ def text_of(inl):
             out.append(text_of(n[2]) if n[2] else n[1])
         elif k == "br":
             out.append(" ")
+        elif k == "video":
+            out.append(video_label(n[1]))
     return "".join(out)
 
 

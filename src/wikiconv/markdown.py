@@ -15,7 +15,7 @@ import json
 import re
 import urllib.parse
 
-from .tree import CAT, Doc, InlineScanner, build_lists, cell_inline, flatten_blocks, merge_text, raw_fallback
+from .tree import CAT, Doc, InlineScanner, build_lists, cell_inline, flatten_blocks, merge_text, raw_fallback, text_of, video_from_link, video_label, video_url
 
 MD_BAD = str.maketrans('\\/:*?"<>|#', "＼／：＊？＂＜＞｜＃")
 MD_BACK = str.maketrans("＼／：＊？＂＜＞｜＃", '\\/:*?"<>|#')
@@ -90,6 +90,8 @@ class Writer:
             elif k == "url":
                 label = self.inline(n[2], cell) if n[2] else self.esc(n[1])
                 out.append(f"[{label}](<{n[1]}>)")
+            elif k == "video":   # 마크다운에는 끼워 넣기가 없어 링크로 쓰고, 읽을 때 같은 모양이면 영상으로 되돌린다
+                out.append(f"[{video_label(n[1])}](<{video_url(n[1], n[2])}>)")
             elif k == "img":
                 out.append(f"![{self.esc(n[2] or '')}](<{n[1]}>)")
             elif k == "fn":
@@ -373,7 +375,7 @@ class Reader:
         label, href = m.group(1), (m.group(2) if m.group(2) is not None else m.group(3)) or ""
         lab = self.inline(label) if label else None
         if re.match(r"(?i)^[a-z][a-z0-9+.-]*:", href) and not re.match(r"(?i)^(분류|틀|category|template):", href):
-            return ["url", href, lab]
+            return (lab and video_from_link(href, text_of(lab))) or ["url", href, lab]
         path, _, anchor = href.partition("#")
         path = urllib.parse.unquote(path)
         if path.lower().endswith(".md") or not path:

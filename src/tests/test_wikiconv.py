@@ -177,6 +177,21 @@ def main():
     assert wikiconv.render(d, "markdown").startswith("**굵은 글**\n*기울인 글*")
     assert wikiconv.parse(wikiconv.render(d, "markdown"), "markdown").blocks == d.blocks
     assert wikiconv.render(d, "namumark").startswith("'''굵은 글'''\n''기울인 글''")
+    # 영상 끼워 넣기: 형식을 돌아도 영상으로 남는다(끼워 넣기가 없는 서비스·형식은 링크)
+    vid = wikiconv.Doc([["p", [["video", "youtube", "dQw4w9WgXcQ"], ["t", " "], ["video", "nicovideo", "sm9"]]]])
+    for fmt in wikiconv.FORMATS:
+        assert wikiconv.parse(wikiconv.render(vid, fmt), fmt).blocks == vid.blocks or fmt in ("dokuwiki", "mediawiki"), fmt
+    for fmt in ("dokuwiki", "mediawiki"):
+        back = wikiconv.parse(wikiconv.render(vid, fmt), fmt).blocks[0][1]
+        assert back[0] == ["video", "youtube", "dQw4w9WgXcQ"], (fmt, back)
+    assert "{{youtube>dQw4w9WgXcQ}}" in wikiconv.render(vid, "dokuwiki")
+    assert "{{#ev:youtube|dQw4w9WgXcQ}}" in wikiconv.render(vid, "mediawiki")
+    assert "[youtube(dQw4w9WgXcQ)]" in wikiconv.render(vid, "namumark")
+    # 외부 그림 주소의 ?질의는 크기 지정으로 오해해 자르지 않는다
+    url = "https://example.com/t/?fname=https://x.com/a.jpg"
+    assert wikiconv.parse("{{" + url + "}}", "dokuwiki").blocks[0][1] == [["img", url, ""]]
+    assert wikiconv.parse("{{a.png?200x100}}", "dokuwiki").blocks[0][1] == [["img", "a.png", ""]]
+    assert wikiconv.render(wikiconv.Doc([["p", [["img", url, ""]]]]), "namumark").strip() == "[[파일:" + url + "]]"
     print("test_wikiconv: 통과")
 
 

@@ -8,7 +8,7 @@ import re
 import unicodedata
 import urllib.parse
 
-from .tree import CAT, TPL, Doc, InlineScanner, build_lists, cell_inline, merge_text, raw_fallback
+from .tree import CAT, TPL, Doc, InlineScanner, build_lists, cell_inline, merge_text, raw_fallback, text_of, video_from_link, video_label, video_url
 
 PH = "\x00"
 PH_RE = re.compile(PH + r"(\d+)" + PH)
@@ -129,7 +129,7 @@ class Reader:
         target = target.strip()
         lab = self.inline(label) if label else None
         if re.match(r"(?i)^[a-z][a-z0-9+.-]*://", target) or target.startswith("mailto:"):
-            return ["url", target, lab]
+            return (lab and video_from_link(target, text_of(lab))) or ["url", target, lab]
         iw = re.match(r"^(\w+)>(.+)$", target)
         if iw:  # 인터위키(wp>…): 도쿠위키 기본 목록에 있는 것은 주소로 풀고, 이 위키에만 있는 이름은 원문으로
             base = INTERWIKI.get(iw.group(1).lower())
@@ -152,10 +152,13 @@ class Reader:
             if all(f in PAGE_COSMETIC for f in flags):
                 return ["tpl", self.resolve(inc.group(1)), []]
             return ["raw", "dokuwiki", m.group(0)]
+        vm = re.fullmatch(r"(youtube|vimeo)>\s*(?:\w+:)?([\w-]+)\s*(?:\?[^|]*)?(?:\|.*)?", inner.strip(), re.I)
+        if vm:  # video·vshare 플러그인의 {{youtube>ID}} (크기 지정은 버린다)
+            return ["video", vm.group(1).lower(), vm.group(2)]
         if re.match(r"\w+>", inner.strip()):  # {{gallery>…}} 같은 그 밖의 플러그인 문법
             return ["raw", "dokuwiki", m.group(0)]
         src, _, alt = inner.strip().partition("|")
-        src = src.split("?")[0].strip()
+        src = re.sub(r"\?(?:\d+(?:x\d+)?|nolink|direct|linkonly|nocache|recache)(?:&(?:\d+(?:x\d+)?|nolink|direct|linkonly|nocache|recache))*\s*$", "", src.strip()).strip()  # 크기·옵션만 떼고, 주소의 ?fname=… 같은 질의는 남긴다
         if not re.match(r"(?:[a-z][a-z0-9+.-]*:)?//", src, re.I) and not re.search(r"\.\w{2,5}$", src):
             return ["raw", "dokuwiki", m.group(0)]  # {{top}}·{{TOC}} 같은 플러그인 문법(파일 이름이 아님)
         return ["img", src, alt.strip()]
@@ -402,6 +405,11 @@ class Writer:
                 out.append(f"[[{n[1]}|{self.inline(n[2])}]]" if n[2] else f"[[{n[1]}]]")
             elif k == "img":
                 out.append("{{" + n[1] + ("|" + n[2] if n[2] else "") + "}}")
+            elif k == "video":
+                if n[1] in ("youtube", "vimeo"):
+                    out.append("{{" + n[1] + ">" + n[2] + "}}")   # video 플러그인 문법
+                else:
+                    out.append(f"[[{video_url(n[1], n[2])}|{video_label(n[1])}]]")
             elif k == "fn":
                 out.append("((" + self.inline(n[2]) + "))")
             elif k == "tpl":

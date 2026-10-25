@@ -1,7 +1,7 @@
 """나무마크(openNAMU) 읽기·쓰기."""
 import re
 
-from .tree import CAT, Doc, InlineScanner, build_lists, flatten_blocks, merge_text, raw_fallback, text_of
+from .tree import CAT, VIDEOS, Doc, InlineScanner, build_lists, flatten_blocks, merge_text, raw_fallback, text_of
 
 PH = "\x00"
 PH_RE = re.compile(PH + r"(\d+)" + PH)
@@ -145,12 +145,6 @@ class Reader:
         page, anchor = resolve(self.title, target)
         return ["link", page, lab, anchor]
 
-    VIDEOS = {"youtube": ("유튜브", "https://www.youtube.com/watch?v={}"),
-              "nicovideo": ("니코니코 동화", "https://www.nicovideo.jp/watch/{}"),
-              "vimeo": ("비메오", "https://vimeo.com/{}"),
-              "kakaotv": ("카카오TV", "https://tv.kakao.com/v/{}"),
-              "navertv": ("네이버TV", "https://tv.naver.com/v/{}")}
-
     def macro(self, m):
         name, arg = m.group(1).lower(), (m.group(3) or "").strip()
         if name in ("목차", "tableofcontents"):
@@ -175,9 +169,9 @@ class Reader:
                 k, eq, v = p.partition("=")
                 args.append([k.strip(), v.strip()] if eq else [None, p])
             return ["tpl", parts[0], args]
-        if name in self.VIDEOS:
-            label, fmt = self.VIDEOS[name]
-            return ["url", fmt.format(arg.split(",")[0].strip()), [["t", f"▶ {label}에서 보기"]]]
+        if name in VIDEOS:
+            vid = arg.split(",")[0].strip()
+            return ["video", name, vid] if vid else ["raw", "namumark", m.group(0)]
         if name == "math":
             return ["math", arg]
         if name == "ruby":
@@ -438,6 +432,8 @@ class Writer:
                 out.append("[br]")
             elif k == "math":
                 out.append("<math>" + n[1] + "</math>")
+            elif k == "video":
+                out.append(f"[{n[1]}({n[2]})]")
             elif k == "link":
                 target = n[1] + ("#" + n[3] if len(n) > 3 and n[3] else "")
                 if n[1].startswith(CAT):
@@ -448,7 +444,7 @@ class Writer:
                 label = self.inline(n[2]) if n[2] else ""
                 out.append(f"[[{n[1]}|{label}]]" if label else f"[[{n[1]}]]")
             elif k == "img":
-                out.append(f"[[파일:{n[1]}]]" if not re.match(r"https?://", n[1]) else f"[[{n[1]}]]")
+                out.append(f"[[파일:{n[1]}]]")  # 바깥 주소도 [[파일:주소]] — [[주소]] 만 쓰면 그림이 아닌 링크로 읽힌다
             elif k == "fn":
                 name = n[1] if n[1] and not n[1].isdigit() else ""
                 out.append(f"[*{name} {self.inline(n[2])}]")

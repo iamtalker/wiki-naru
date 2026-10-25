@@ -2,7 +2,7 @@
 import html
 import re
 
-from .tree import CAT, TPL, Doc, InlineScanner, build_lists, flatten_blocks, merge_text, raw_fallback
+from .tree import CAT, TPL, Doc, InlineScanner, build_lists, flatten_blocks, merge_text, raw_fallback, text_of, video_from_link, video_label, video_url
 
 PH = "\x00"
 PH_RE = re.compile(PH + r"(\d+)" + PH)
@@ -109,7 +109,10 @@ class Reader:
                 out.append(text[j:])
                 return "".join(out)
             inner = text[j + 2:k - 2]
-            if not inner.lstrip().startswith(":") and (inner.startswith("{") or inner.lstrip().startswith("#")
+            ev = re.match(r"\s*#evp?:\s*(youtube|vimeo)\s*\|\s*(?:id\s*=\s*)?([\w-]+)", inner, re.I)
+            if ev:  # EmbedVideo 확장의 {{#ev:youtube|ID}} (크기 같은 나머지 인자는 버린다)
+                out.append(self.put("i", ["video", ev.group(1).lower(), ev.group(2)]))
+            elif not inner.lstrip().startswith(":") and (inner.startswith("{") or inner.lstrip().startswith("#")
                                                        or re.match(r"\s*[A-Z]+[:|]", inner) or inner.strip().isupper()):
                 out.append(self.put("i", ["raw", "mediawiki", "{{" + inner + "}}"]))
             else:
@@ -251,7 +254,7 @@ class Reader:
                 (re.compile(PH + r"(\d+)" + PH), self._ph),
                 (re.compile(r"\[\[((?:[^\[\]]|\[\[[^\]]*\]\])+?)\]\]"), self.link),
                 (re.compile(r"\[((?:https?|ftp|mailto):[^\s\]]+)(?:\s+([^\]]*))?\]"),
-                 lambda m: ["url", m.group(1), self.inline(m.group(2)) if m.group(2) else None]),
+                 lambda m: (m.group(2) and video_from_link(m.group(1), m.group(2).strip())) or ["url", m.group(1), self.inline(m.group(2)) if m.group(2) else None]),
                 (re.compile(r"(?<![\"'=\[])\bhttps?://[^\s<>\[\]\"']+"), lambda m: ["url", m.group(0), None]),
                 (re.compile(r"'''''(.+?)'''''"), lambda m: ["b", [["i", self.inline(m.group(1))]]]),
                 (re.compile(r"'''(.+?)'''"), b),
@@ -428,6 +431,11 @@ class Writer:
                 out.append(f"[[{target}|{label}]]" if label else f"[[{target}]]")
             elif k == "url":
                 out.append(f"[{n[1]} {self.inline(n[2])}]" if n[2] else f"[{n[1]}]" if " " in n[1] else n[1])
+            elif k == "video":
+                if n[1] in ("youtube", "vimeo"):
+                    out.append("{{#ev:" + n[1] + "|" + n[2] + "}}")   # EmbedVideo 확장 문법
+                else:
+                    out.append(f"[{video_url(n[1], n[2])} {video_label(n[1])}]")
             elif k == "img":
                 out.append(f"[[File:{n[1]}{'|' + n[2] if n[2] else ''}]]" if not re.match(r"https?://", n[1])
                            else f"[{n[1]} {n[2] or n[1]}]")
