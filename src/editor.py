@@ -215,16 +215,18 @@ def find_note(base_dir, page, depth=3):
 # ================================================================ 서식 도구 (문법마다 표기가 달라 표로 둔다)
 WRAP = {  # 글을 감싸는 서식: (앞, 뒤)
     "markdown": {"b": ("**", "**"), "i": ("*", "*"), "s": ("~~", "~~"), "code": ("`", "`"),
-                 "link": ("[", "](주소)"), "img": ("![", "](그림.png)")},
+                 "link": ("[", "](주소)"), "img": ("![", "](그림.png)"),
+                 "video": ("[▶ 유튜브에서 보기](<https://www.youtube.com/watch?v=", ">)")},
     "dokuwiki": {"b": ("**", "**"), "i": ("//", "//"), "s": ("<del>", "</del>"), "code": ("''", "''"),
-                 "link": ("[[", "]]"), "img": ("{{", "}}"), "fn": ("((", "))")},
+                 "link": ("[[", "]]"), "img": ("{{", "}}"), "fn": ("((", "))"), "video": ("{{youtube>", "}}")},
     "mediawiki": {"b": ("'''", "'''"), "i": ("''", "''"), "s": ("<s>", "</s>"), "code": ("<code>", "</code>"),
-                  "link": ("[[", "]]"), "img": ("[[File:", "]]"), "quote": ("<blockquote>", "</blockquote>"), "fn": ("<ref>", "</ref>")},
+                  "link": ("[[", "]]"), "img": ("[[File:", "]]"), "quote": ("<blockquote>", "</blockquote>"), "fn": ("<ref>", "</ref>"),
+                  "video": ("{{#ev:youtube|", "}}")},
     "opennamu": {"b": ("'''", "'''"), "i": ("''", "''"), "s": ("~~", "~~"), "code": ("{{{", "}}}"),
-                 "link": ("[[", "]]"), "img": ("[[파일:", "]]"), "fn": ("[* ", "]")},
+                 "link": ("[[", "]]"), "img": ("[[파일:", "]]"), "fn": ("[* ", "]"), "video": ("[youtube(", ")]")},
 }
 WRAP_DEFAULT = {"b": "굵은 글", "i": "기울인 글", "s": "취소선", "code": "코드", "link": "링크 글", "img": "설명", "quote": "인용",
-                "fn": "각주 내용"}
+                "fn": "각주 내용", "video": "영상ID"}
 LINE = {  # 줄 앞에 붙이는 서식: (붙일 글, 이미 붙었는지 보는 식). {n} 은 번호
     "markdown": {"ul": ("- ", r"^[-*+] "), "ol": ("{n}. ", r"^\d+\. "), "quote": ("> ", r"^> ?")},
     "dokuwiki": {"ul": ("  * ", r"^ +\* "), "ol": ("  - ", r"^ +- "), "quote": ("> ", r"^>+ ?")},
@@ -301,9 +303,9 @@ def syntax_entries(fmt):
         out.append(("목록·인용", "인용", w["quote"][0] + "글" + w["quote"][1], ("wrap", "quote")))
     elif "quote" in ln:
         out.append(("목록·인용", "인용", ln["quote"][0] + "글", ("line", "quote")))
-    for key, name in (("link", "링크"), ("img", "그림"), ("fn", "각주")):
+    for key, name in (("link", "링크"), ("img", "그림"), ("video", "유튜브 영상"), ("fn", "각주")):
         if key in w:
-            out.append(("넣기", name, w[key][0] + "글" + w[key][1], ("wrap", key)))
+            out.append(("넣기", name, w[key][0] + ("영상ID" if key == "video" else "글") + w[key][1], ("wrap", key)))
     first = lambda s: s.split("\n")[0] + (" …" if "\n" in s else "")  # noqa: E731
     out.append(("넣기", "표", first(BLOCK["table"][fmt]), ("block", "table")))
     out.append(("넣기", "가로줄", BLOCK["hr"][fmt], ("block", "hr")))

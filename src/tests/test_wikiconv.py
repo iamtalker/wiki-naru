@@ -187,6 +187,9 @@ def main():
     assert "{{youtube>dQw4w9WgXcQ}}" in wikiconv.render(vid, "dokuwiki")
     assert "{{#ev:youtube|dQw4w9WgXcQ}}" in wikiconv.render(vid, "mediawiki")
     assert "[youtube(dQw4w9WgXcQ)]" in wikiconv.render(vid, "namumark")
+    for src in ("https://youtu.be/dQw4w9WgXcQ?t=5", "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=5",
+                "https://www.youtube.com/embed/dQw4w9WgXcQ", "dQw4w9WgXcQ"):
+        assert wikiconv.parse(f"[youtube({src})]", "namumark").blocks[0][1] == [["video", "youtube", "dQw4w9WgXcQ"]], src
     # 외부 그림 주소의 ?질의는 크기 지정으로 오해해 자르지 않는다
     url = "https://example.com/t/?fname=https://x.com/a.jpg"
     assert wikiconv.parse("{{" + url + "}}", "dokuwiki").blocks[0][1] == [["img", url, ""]]

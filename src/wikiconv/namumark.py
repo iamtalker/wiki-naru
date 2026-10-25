@@ -171,6 +171,9 @@ class Reader:
             return ["tpl", parts[0], args]
         if name in VIDEOS:
             vid = arg.split(",")[0].strip()
+            if name == "youtube":   # 주소로 쓴 것(youtu.be/ID · watch?v=ID · embed/ID)도 ID 만 뽑는다
+                ym = re.match(r"(?i)https?://(?:youtu\.be/|(?:www\.|m\.)?youtube\.com/(?:watch\?(?:[^#\s]*&)?v=|embed/|shorts/))([\w-]+)", vid)
+                vid = ym.group(1) if ym else vid
             return ["video", name, vid] if vid else ["raw", "namumark", m.group(0)]
         if name == "math":
             return ["math", arg]
