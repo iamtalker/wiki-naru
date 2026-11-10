@@ -165,13 +165,8 @@ class Layout:
             self.emit(text_of(b[2]) + "\n", m + ("b",))
         if not rows:
             return
-        cols = max(len(r) for r in rows)
-        w = [max([width(r[i]) for r in rows if i < len(r)] + [1]) for i in range(cols)]
-        for ri, r in enumerate(rows):
-            cells = [pad(r[i] if i < len(r) else "", w[i]) for i in range(cols)]
-            self.emit("│ " + " │ ".join(cells) + " │\n", m + ("code",))
-            if ri == 0:
-                self.emit("├─" + "─┼─".join("─" * x for x in w) + "─┤\n", m + ("code",))
+        # 표는 글자 격자가 아니라 실제 칸(위젯)으로 그린다. 화면 쪽(editor.py)이 이 조각을 보고 만든다.
+        self.out.append(("", tuple(m), ("table", rows)))
         self.emit("\n", m)
 
 

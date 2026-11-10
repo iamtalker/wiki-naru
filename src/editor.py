@@ -458,7 +458,7 @@ def run_gui(argv=None, loop=True):
 
         def __init__(self, ed, parent, mode):
             self.ed, self.mode, self.last_text = ed, mode, ""
-            self.links, self.images = {}, []
+            self.links, self.images, self.tables = {}, [], []
             self.frame = tk.Frame(parent, bg=C["bg"])
             head = tk.Frame(self.frame, bg=C["bg"], padx=8, pady=6)
             head.pack(side="top", fill="x")
@@ -1440,6 +1440,9 @@ def run_gui(argv=None, loop=True):
             v = p.view
             top = v.yview()[0]
             v.config(state="normal")
+            for w in p.tables:
+                w.destroy()
+            p.tables = []
             v.delete("1.0", "end")
             p.links.clear()
             p.images.clear()
@@ -1451,11 +1454,38 @@ def run_gui(argv=None, loop=True):
                     key = "L%d" % len(p.links)
                     p.links[key] = extra[1:]
                     tg.append(key)
+                if extra and extra[0] == "table":
+                    self.embed_table(p, extra[1])
+                    continue
                 if extra and extra[0] == "img" and self.show_image(p, extra[1]):
                     continue
                 v.insert("end", t, tuple(tg))
             v.config(state="disabled")
             v.yview_moveto(top)
+
+        def embed_table(self, p, rows):
+            """표를 칸이 있는 실제 격자(위젯)로 본문에 끼워 넣는다. 글은 칸 안에서 줄바꿈한다."""
+            v = p.view
+            cols = max(len(r) for r in rows)
+            font = v.cget("font")
+            bold = tkfont.Font(font=font)
+            bold.configure(weight="bold")
+            avail = max(300, (v.winfo_width() or 760) - 70)
+            wrap = max(120, avail // cols - 14)
+            frame = tk.Frame(v, bg=C["line"], bd=0)
+            for ri, r in enumerate(rows):
+                head = ri == 0
+                for ci in range(cols):
+                    txt = r[ci] if ci < len(r) else ""
+                    lab = tk.Label(frame, text=txt, justify="left", anchor="nw", wraplength=wrap,
+                                   font=bold if head else font, padx=8, pady=5,
+                                   bg="#f1f5f9" if head else C["card"], fg=C["text"])
+                    lab.grid(row=ri, column=ci, sticky="nsew", padx=(0 if ci == 0 else 1, 0), pady=(0 if ri == 0 else 1, 0))
+            for ci in range(cols):
+                frame.grid_columnconfigure(ci, weight=1, uniform="tbl")
+            p.tables.append(frame)
+            v.window_create("end", window=frame, padx=0, pady=6)
+            v.insert("end", "\n")
 
         def show_image(self, p, src):
             """그림으로 보여 준다: 같은 폴더의 그림 파일, 또는 http(s) 외부 주소(옵션). 안 되면 글자 칩으로 남는다."""

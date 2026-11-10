@@ -159,7 +159,7 @@ def main():
     assert any(ex and ex[0] == "img" and ex[1] == "사진.png" for _, _, ex in segs)
     text = "".join(t for t, _, _ in segs)
     assert "• 하나" in text and "3. 셋" not in text and "1. 셋" in text and "[1]" in text and "1. 인라인 각주" in text
-    assert "│ 한글 │ b" in text.replace("  ", " ") or "한글" in text
+    assert any(ex and ex[0] == "table" and any("한글" in r for r in ex[1]) for _, _, ex in segs)   # 표는 칸 위젯으로 그린다
     assert "print(1)" in tagged(segs, "codeblock")
     assert any("M1" in tags and "quote" in tags for _, tags, _ in segs)
     assert any(tag.startswith("B") for _, tags, _ in segs for tag in tags)
