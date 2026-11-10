@@ -1439,6 +1439,11 @@ def run_gui(argv=None, loop=True):
         def render_view(self, p, segs):
             v = p.view
             top = v.yview()[0]
+            p.last_segs = segs
+            p.last_w = v.winfo_width()
+            if not getattr(p, "resize_bound", False):
+                p.resize_bound = True
+                v.bind("<Configure>", lambda e, p=p: self.on_view_resize(p), add="+")
             v.config(state="normal")
             for w in p.tables:
                 w.destroy()
@@ -1463,6 +1468,21 @@ def run_gui(argv=None, loop=True):
             v.config(state="disabled")
             v.yview_moveto(top)
 
+        def on_view_resize(self, p):
+            """표가 있을 때 렌더링 창 너비가 크게 바뀌면 칸을 다시 나눈다(잦은 호출은 한 번으로 모은다)."""
+            if not p.tables or not getattr(p, "last_segs", None):
+                return
+            w = p.view.winfo_width()
+            if abs(w - getattr(p, "last_w", 0)) < 40:
+                return
+            if getattr(p, "relayout_job", None):
+                p.view.after_cancel(p.relayout_job)
+
+            def again():
+                p.relayout_job = None
+                self.render_view(p, p.last_segs)
+            p.relayout_job = p.view.after(200, again)
+
         def embed_table(self, p, rows):
             """표를 칸이 있는 실제 격자(위젯)로 본문에 끼워 넣는다. 글은 칸 안에서 줄바꿈한다."""
             v = p.view
@@ -1470,19 +1490,21 @@ def run_gui(argv=None, loop=True):
             font = v.cget("font")
             bold = tkfont.Font(font=font)
             bold.configure(weight="bold")
-            avail = max(300, (v.winfo_width() or 760) - 70)
-            wrap = max(120, avail // cols - 14)
+            avail = max(260, (v.winfo_width() or 760) - 60)
+            # 칸 너비는 각 열의 글 길이에 비례해서 나눈다(긴 글 열이 넓게)
+            cells = [[(r[ci] if ci < len(r) else "") for r in rows] for ci in range(cols)]
+            lens = [max(6, min(max(len(s) for s in col), 60)) for col in cells]
+            room = avail - 18 * cols
+            wraps = [max(90, int(room * n / sum(lens))) for n in lens]
             frame = tk.Frame(v, bg=C["line"], bd=0)
             for ri, r in enumerate(rows):
                 head = ri == 0
                 for ci in range(cols):
                     txt = r[ci] if ci < len(r) else ""
-                    lab = tk.Label(frame, text=txt, justify="left", anchor="nw", wraplength=wrap,
+                    lab = tk.Label(frame, text=txt, justify="left", anchor="nw", wraplength=wraps[ci],
                                    font=bold if head else font, padx=8, pady=5,
                                    bg="#f1f5f9" if head else C["card"], fg=C["text"])
                     lab.grid(row=ri, column=ci, sticky="nsew", padx=(0 if ci == 0 else 1, 0), pady=(0 if ri == 0 else 1, 0))
-            for ci in range(cols):
-                frame.grid_columnconfigure(ci, weight=1, uniform="tbl")
             p.tables.append(frame)
             v.window_create("end", window=frame, padx=0, pady=6)
             v.insert("end", "\n")
