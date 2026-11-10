@@ -1444,6 +1444,16 @@ def run_gui(argv=None, loop=True):
             if not getattr(p, "resize_bound", False):
                 p.resize_bound = True
                 v.bind("<Configure>", lambda e, p=p: self.on_view_resize(p), add="+")
+
+                def view_wheel(e, v=v):
+                    if e.num == 4 or getattr(e, "delta", 0) > 0:
+                        v.yview_scroll(-3, "units")
+                    elif e.num == 5 or getattr(e, "delta", 0) < 0:
+                        v.yview_scroll(3, "units")
+                    return "break"
+                v.bind("<MouseWheel>", view_wheel)
+                v.bind("<Button-4>", view_wheel)
+                v.bind("<Button-5>", view_wheel)
             v.config(state="normal")
             for w in p.tables:
                 w.destroy()
@@ -1505,6 +1515,22 @@ def run_gui(argv=None, loop=True):
                                    font=bold if head else font, padx=8, pady=5,
                                    bg="#f1f5f9" if head else C["card"], fg=C["text"])
                     lab.grid(row=ri, column=ci, sticky="nsew", padx=(0 if ci == 0 else 1, 0), pady=(0 if ri == 0 else 1, 0))
+            # 표 위에서는 휠·클릭이 칸 위젯으로 가서 본문이 안 움직이므로 본문 쪽으로 넘겨 준다
+            def wheel(e):
+                if e.num == 4 or getattr(e, "delta", 0) > 0:
+                    v.yview_scroll(-3, "units")
+                elif e.num == 5 or getattr(e, "delta", 0) < 0:
+                    v.yview_scroll(3, "units")
+                return "break"
+
+            def focus(e):
+                v.focus_set()
+
+            for wdg in [frame] + list(frame.winfo_children()):
+                wdg.bind("<MouseWheel>", wheel)
+                wdg.bind("<Button-4>", wheel)
+                wdg.bind("<Button-5>", wheel)
+                wdg.bind("<Button-1>", focus)
             p.tables.append(frame)
             v.window_create("end", window=frame, padx=0, pady=6)
             v.insert("end", "\n")
@@ -1597,6 +1623,7 @@ def run_gui(argv=None, loop=True):
             self.update_status()
 
         def on_view_click(self, p, e):
+            p.view.focus_set()          # 클릭하면 렌더링 창이 키보드(PageUp/PageDown)를 받는다
             idx = p.view.index(f"@{e.x},{e.y}")
             for t in p.view.tag_names(idx):
                 if t in p.links:
